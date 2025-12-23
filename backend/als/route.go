@@ -2,7 +2,6 @@ package als
 
 import (
 	"fmt"
-	"io"
 	"io/fs"
 	"net/http"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/X-Zero-L/als/als/controller/session"
 	"github.com/X-Zero-L/als/als/controller/shell"
 	"github.com/X-Zero-L/als/als/controller/speedtest"
+	"github.com/X-Zero-L/als/als/controller/tokens"
 	"github.com/X-Zero-L/als/config"
 	iEmbed "github.com/X-Zero-L/als/embed"
 )
@@ -26,7 +26,7 @@ func SetupHttpRoute(e *gin.Engine) {
 	e.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, session")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, session, X-Api-Key")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
 
 		if c.Request.Method == "OPTIONS" {
@@ -38,65 +38,7 @@ func SetupHttpRoute(e *gin.Engine) {
 	})
 
 	e.GET("/session", session.Handle)
-	
-	// BGP graph proxy endpoint with 24-hour caching
-	e.GET("/bgp/graph/:asn/:type", func(c *gin.Context) {
-		asn := c.Param("asn")
-		graphType := c.Param("type") // combined, ipv4, ipv6
-		
-		// Check cache first
-		if cachedData, found := config.GetBGPGraphCached(asn, graphType); found {
-			c.Header("Content-Type", "image/svg+xml")
-			c.Header("Cache-Control", "public, max-age=86400") // Cache for 24 hours
-			c.Header("X-Cache", "HIT")
-			c.Data(200, "image/svg+xml", cachedData)
-			return
-		}
-		
-		// Construct BGPView URL
-		var url string
-		switch graphType {
-		case "ipv4":
-			url = fmt.Sprintf("https://api.bgpview.io/assets/graphs/AS%s_IPv4.svg", asn)
-		case "ipv6":
-			url = fmt.Sprintf("https://api.bgpview.io/assets/graphs/AS%s_IPv6.svg", asn)
-		case "combined":
-			url = fmt.Sprintf("https://api.bgpview.io/assets/graphs/AS%s_Combined.svg", asn)
-		default:
-			c.JSON(400, gin.H{"error": "Invalid graph type"})
-			return
-		}
-		
-		// Fetch SVG from BGPView
-		resp, err := http.Get(url)
-		if err != nil {
-			c.JSON(500, gin.H{"error": "Failed to fetch BGP graph"})
-			return
-		}
-		defer resp.Body.Close()
-		
-		if resp.StatusCode != 200 {
-			c.JSON(resp.StatusCode, gin.H{"error": "BGP graph not found"})
-			return
-		}
-		
-		// Read response data
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			c.JSON(500, gin.H{"error": "Failed to read BGP graph data"})
-			return
-		}
-		
-		// Cache the result for 24 hours
-		config.SetBGPGraphCache(asn, graphType, data)
-		
-		// Set proper headers and return the SVG
-		c.Header("Content-Type", "image/svg+xml")
-		c.Header("Cache-Control", "public, max-age=86400") // Cache for 24 hours
-		c.Header("X-Cache", "MISS")
-		c.Data(200, "image/svg+xml", data)
-	})
-	
+
 	// Node management endpoints (no session required for cross-node functionality)
 	// Node management API (public endpoints)
 	e.GET("/nodes", nodes.GetNodes)
@@ -107,12 +49,21 @@ func SetupHttpRoute(e *gin.Engine) {
 	admin := e.Group("/api/admin")
 	admin.Use(nodes.RequireApiKey)
 	{
+		// Node management
 		admin.POST("/nodes", nodes.CreateNode)
-		admin.GET("/nodes/add", nodes.CreateNode)     // GET endpoint for easy automation
 		admin.GET("/nodes/:id", nodes.GetNodeDetail)
 		admin.PUT("/nodes/:id", nodes.UpdateNode)
 		admin.DELETE("/nodes/:id", nodes.DeleteNode)
+
+		// Token management (for one-click deployment)
+		admin.POST("/tokens", tokens.CreateToken)
+		admin.GET("/tokens", tokens.ListTokens)
+		admin.DELETE("/tokens/:id", tokens.DeleteToken)
+		admin.GET("/install-script/:token", tokens.GetInstallScript)
 	}
+
+	// Public node registration endpoint (token-based, no admin key required)
+	e.POST("/api/register", tokens.RegisterNode)
 	
 	v1 := e.Group("/method", controller.MiddlewareSessionOnHeader())
 	{
@@ -163,35 +114,49 @@ func SetupHttpRoute(e *gin.Engine) {
 		}
 	}
 
-	e.Any("/assets/:filename", func(c *gin.Context) {
-		filePath := c.Request.RequestURI
-		filePath = filePath[1:]
-		handleStatisFile(filePath, c)
-	})
+	// Static file routes - skip in Agent mode
+	if !config.Config.AgentMode {
+		e.Any("/assets/:filename", func(c *gin.Context) {
+			filePath := c.Request.RequestURI
+			filePath = filePath[1:]
+			handleStatisFile(filePath, c)
+		})
 
-	e.GET("/css/:filename", func(c *gin.Context) {
-		filePath := c.Request.RequestURI
-		filePath = filePath[1:]
-		handleStatisFile(filePath, c)
-	})
+		e.GET("/css/:filename", func(c *gin.Context) {
+			filePath := c.Request.RequestURI
+			filePath = filePath[1:]
+			handleStatisFile(filePath, c)
+		})
 
-	e.GET("/js/:filename", func(c *gin.Context) {
-		filePath := c.Request.RequestURI
-		filePath = filePath[1:]
-		handleStatisFile(filePath, c)
-	})
+		e.GET("/js/:filename", func(c *gin.Context) {
+			filePath := c.Request.RequestURI
+			filePath = filePath[1:]
+			handleStatisFile(filePath, c)
+		})
 
-	e.GET("/", func(c *gin.Context) {
-		handleIndexHTML(c)
-	})
+		e.GET("/", func(c *gin.Context) {
+			handleIndexHTML(c)
+		})
 
-	e.GET("/speedtest_worker.js", func(c *gin.Context) {
-		handleStatisFile("speedtest_worker.js", c)
-	})
+		e.GET("/speedtest_worker.js", func(c *gin.Context) {
+			handleStatisFile("speedtest_worker.js", c)
+		})
 
-	e.GET("/favicon.ico", func(c *gin.Context) {
-		handleFavicon(c)
-	})
+		e.GET("/favicon.ico", func(c *gin.Context) {
+			handleFavicon(c)
+		})
+	} else {
+		// Agent mode: return JSON info on root path
+		e.GET("/", func(c *gin.Context) {
+			c.JSON(200, gin.H{
+				"mode":     "agent",
+				"name":     config.Config.Location,
+				"version":  "2.2.0",
+				"api":      true,
+				"ui":       false,
+			})
+		})
+	}
 }
 
 func handleStatisFile(filePath string, c *gin.Context) {

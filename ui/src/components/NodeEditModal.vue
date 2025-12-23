@@ -1,5 +1,5 @@
 <template>
-  <!-- Enhanced Modal with glass morphism and modern animations -->
+  <!-- Edit Node Modal (Agent mode - edit only) -->
   <transition
     enter-active-class="transition-all duration-300 ease-out"
     enter-from-class="opacity-0 scale-95"
@@ -14,24 +14,21 @@
         <div class="px-8 py-6 border-b border-gray-200/50 dark:border-gray-600/50">
           <div class="flex items-center space-x-4">
             <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl shadow-lg shadow-primary-500/25 flex items-center justify-center animate-scale-in">
-              <svg v-if="isEdit" class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-              </svg>
-              <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
               </svg>
             </div>
             <div>
               <h3 class="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
-                {{ isEdit ? 'Edit Node' : 'Add New Node' }}
+                Edit Node
               </h3>
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {{ isEdit ? 'Update node information' : 'Configure a new network node' }}
+                Update node name and location
               </p>
             </div>
           </div>
         </div>
-        
+
         <!-- Modal Body -->
         <div class="px-8 py-6">
           <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -84,37 +81,29 @@
               </p>
             </div>
 
-            <!-- URL Field -->
+            <!-- URL Field (Read-only) -->
             <div class="animate-slide-up" style="animation-delay: 0.3s;">
               <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                URL *
+                Endpoint URL
+                <span class="text-xs font-normal text-gray-500 dark:text-gray-400 ml-2">(Read-only)</span>
               </label>
               <div class="relative">
-                <input
-                  v-model="formData.url"
-                  type="url"
-                  required
-                  placeholder="https://lg.example.com"
-                  class="w-full px-4 py-3 pl-12 border border-gray-300/50 dark:border-gray-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm text-gray-900 dark:text-gray-100 transition-all duration-200 placeholder-gray-500 dark:placeholder-gray-400"
-                  :class="{ 'border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500': formData.url && !isValidUrl(formData.url) }"
-                >
+                <div class="w-full px-4 py-3 pl-12 border border-gray-200/50 dark:border-gray-600/50 rounded-xl bg-gray-100/80 dark:bg-gray-700/50 backdrop-blur-sm text-gray-600 dark:text-gray-400 font-mono text-sm break-all">
+                  {{ formData.url }}
+                </div>
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
                   </svg>
                 </div>
-                <!-- URL Validation Indicator -->
                 <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <svg v-if="formData.url && isValidUrl(formData.url)" class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                  <svg v-else-if="formData.url && !isValidUrl(formData.url)" class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                   </svg>
                 </div>
               </div>
-              <p class="text-xs mt-2 ml-1" :class="formData.url && !isValidUrl(formData.url) ? 'text-red-500 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'">
-                {{ formData.url && !isValidUrl(formData.url) ? 'Please enter a valid URL' : 'Full URL including protocol (https://)' }}
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 ml-1">
+                URL is set during agent registration and cannot be changed
               </p>
             </div>
 
@@ -137,23 +126,20 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  {{ isEdit ? 'Updating...' : 'Creating...' }}
+                  Saving...
                 </span>
                 <span v-else class="flex items-center">
-                  <svg v-if="isEdit" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                   </svg>
-                  <svg v-else class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                  </svg>
-                  {{ isEdit ? 'Update Node' : 'Create Node' }}
+                  Save Changes
                 </span>
               </button>
             </div>
           </form>
         </div>
 
-        <!-- Enhanced URL Validation Tips -->
+        <!-- Info Box -->
         <div class="px-8 pb-6 animate-slide-up" style="animation-delay: 0.5s;">
           <div class="p-4 bg-gradient-to-r from-blue-50 to-primary-50 dark:from-blue-900/20 dark:to-primary-900/20 border border-blue-200/50 dark:border-blue-700/50 rounded-xl backdrop-blur-sm">
             <div class="flex items-start space-x-3">
@@ -163,25 +149,10 @@
                 </svg>
               </div>
               <div>
-                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-2">URL Requirements:</h4>
-                <ul class="text-xs text-blue-700 dark:text-blue-400 space-y-1.5">
-                  <li class="flex items-center space-x-2">
-                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    <span>Must include protocol (https:// recommended)</span>
-                  </li>
-                  <li class="flex items-center space-x-2">
-                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    <span>Should be accessible from this server</span>
-                  </li>
-                  <li class="flex items-center space-x-2">
-                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    <span>Node must run the same Looking Glass software</span>
-                  </li>
-                  <li class="flex items-center space-x-2">
-                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    <span>CORS must be properly configured</span>
-                  </li>
-                </ul>
+                <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">Agent Mode</h4>
+                <p class="text-xs text-blue-700 dark:text-blue-400">
+                  This node was deployed using an agent token. The endpoint URL is automatically detected during registration and cannot be modified.
+                </p>
               </div>
             </div>
           </div>
@@ -201,7 +172,7 @@ const props = defineProps({
   },
   isEdit: {
     type: Boolean,
-    default: false
+    default: true
   }
 })
 
@@ -223,41 +194,27 @@ if (props.node) {
   }
 }
 
+// Form validation - only name and location (URL is read-only)
 const isFormValid = computed(() => {
-  return formData.value.name.trim() && 
-         formData.value.location.trim() && 
-         formData.value.url.trim() &&
-         isValidUrl(formData.value.url)
+  return formData.value.name.trim() && formData.value.location.trim()
 })
-
-const isValidUrl = (url) => {
-  try {
-    new URL(url)
-    return true
-  } catch {
-    return false
-  }
-}
 
 const handleSubmit = async () => {
   if (!isFormValid.value) return
-  
+
   saving.value = true
   try {
-    // Clean URL - remove trailing slash
-    const cleanUrl = formData.value.url.replace(/\/$/, '')
-    
     emit('save', {
       name: formData.value.name.trim(),
       location: formData.value.location.trim(),
-      url: cleanUrl
+      url: formData.value.url // Keep original URL unchanged
     })
   } finally {
     saving.value = false
   }
 }
 
-// Auto-focus first input when modal opens
+// Watch for node prop changes
 watch(() => props.node, () => {
   if (props.node) {
     formData.value = {

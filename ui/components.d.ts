@@ -8,10 +8,10 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     Admin: typeof import('./src/components/Admin.vue')['default']
-    BGP: typeof import('./src/components/Utilities/BGP.vue')['default']
     Copy: typeof import('./src/components/Copy.vue')['default']
     FileSpeedtest: typeof import('./src/components/Speedtest/FileSpeedtest.vue')['default']
     Information: typeof import('./src/components/Information.vue')['default']
+    InstallScriptModal: typeof import('./src/components/InstallScriptModal.vue')['default']
     IPerf3: typeof import('./src/components/Utilities/IPerf3.vue')['default']
     LanguageSelector: typeof import('./src/components/LanguageSelector.vue')['default']
     Librespeed: typeof import('./src/components/Speedtest/Librespeed.vue')['default']
@@ -29,6 +29,7 @@ declare module 'vue' {
     SpeedtestNet: typeof import('./src/components/Utilities/SpeedtestNet.vue')['default']
     ThemeToggle: typeof import('./src/components/ThemeToggle.vue')['default']
     Toast: typeof import('./src/components/Toast.vue')['default']
+    TokenCreateModal: typeof import('./src/components/TokenCreateModal.vue')['default']
     Traceroute: typeof import('./src/components/Utilities/Traceroute.vue')['default']
     Traceroute6: typeof import('./src/components/Utilities/Traceroute6.vue')['default']
     TrafficDisplay: typeof import('./src/components/TrafficDisplay.vue')['default']
